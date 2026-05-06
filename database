@@ -4,38 +4,45 @@
 CREATE DATABASE IF NOT EXISTS neurodesk_db;
 USE neurodesk_db;
 
--- Tabela de Produtos (Medicamentos)
-CREATE TABLE produtos (
+-- 1. Criação da Tabela de Produtos (Com coluna de Prioridade)
+CREATE TABLE IF NOT EXISTS produtos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     categoria VARCHAR(50),
     estoque_atual INT DEFAULT 0,
     estoque_minimo INT DEFAULT 10,
-    preco DECIMAL(10, 2) NOT NULL
+    preco DECIMAL(10, 2) NOT NULL,
+    status_prioridade VARCHAR(20) DEFAULT 'Normal' -- [ Monitoramento de Foco]
 );
 
--- Tabela de Vendas
-CREATE TABLE vendas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    produto_id INT,
-    quantidade INT,
-    data_venda DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (produto_id) REFERENCES produtos(id)
-);
-
--- Tabela de Foco (Diferencial Neurodesk)
--- Registra quanto tempo o funcionário levou para processar uma tarefa
-CREATE TABLE logs_produtividade (
+-- 2. Tabela de Logs (Produtividade)
+CREATE TABLE IF NOT EXISTS logs_produtividade (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tarefa_nome VARCHAR(100),
     tempo_gasto_segundos INT,
     data_registro DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inserir dados 
-INSERT INTO produtos (nome, categoria, estoque_atual, preco) VALUES 
-('Paracetamol 500mg', 'Analgésico', 100, 15.50),
-('Amoxicilina 250mg', 'Antibiótico', 45, 42.00);
+-- 3. GATILHO (TRIGGER): O coração do "Foco Extremo"
+-- [MUDANÇA: Automatiza a prioridade sem intervenção humana]
+DELIMITER //
+CREATE TRIGGER tr_check_estoque_prioridade
+BEFORE UPDATE ON produtos
+FOR EACH ROW
+BEGIN
+    IF NEW.estoque_atual <= NEW.estoque_minimo THEN
+        SET NEW.status_prioridade = 'CRÍTICO';
+    ELSE
+        SET NEW.status_prioridade = 'Normal';
+    END IF;
+END; //
+DELIMITER ;
+
+-- 4. Inserção de dados iniciais 
+INSERT INTO produtos (nome, categoria, estoque_atual, estoque_minimo, preco) VALUES 
+('Dipirona 500mg', 'Analgésico', 100, 20, 4.50),
+('Amoxicilina 250mg', 'Antibiótico', 15, 20, 42.00),
+('CeraVe Hidratante', 'Dermocosmético', 5, 10, 95.00);
 
 /* Inserir mais dados para análise:
 USE neurodesk_db;
