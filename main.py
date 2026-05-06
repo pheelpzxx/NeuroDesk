@@ -1,63 +1,74 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 import mysql.connector
-from pydantic import BaseModel
-from typing import List
+import csv
+import os
 
-app = FastAPI(title="Neurodesk API - Produtividade Farmacêutica")
+app = FastAPI(title="NeuroDesk - Sistema de Foco Extremo")
 
-# Configuração da conexão com o banco de dados
+# Configuração de conexão
 db_config = {
     "host": "localhost",
     "user": "root",
-    "password": "sua_senha",
+    "password": "sua_senha", # [AJUSTE AQUI]
     "database": "neurodesk_db"
 }
 
-# Modelo de Dados para validação
-class Produto(BaseModel):
-    nome: str
+# [MUDANÇA: Validação de Dados Pydantic]
+# Impede o retrabalho garantindo que os dados inseridos sejam válidos
+class ProdutoSchema(BaseModel):
+    nome: str = Field(..., min_length=2)
     categoria: str
-    estoque_atual: int
-    preco: float
+    estoque_atual: int = Field(..., ge=0)
+    estoque_minimo: int = Field(10, ge=0)
+    preco: float = Field(..., gt=0)
 
-# Rota para Listar Produtos (Onde a IA pode atuar prevendo falta de estoque)
-@app.get("/produtos", response_model=List[dict])
+# 1. Rota para Listar Produtos
+@app.get("/produtos")
 def listar_produtos():
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM produtos")
-    produtos = cursor.fetchall()
+    cursor.execute("SELECT * FROM produtos ORDER BY status_prioridade DESC")
+    dados = cursor.fetchall()
     cursor.close()
     conn.close()
-    return produtos
+    return dados
 
-# Rota para Registrar Produtividade (O cérebro da Neurodesk)
-@app.post("/log-produtividade")
-def registrar_foco(tarefa: str, segundos: int):
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
-        sql = "INSERT INTO logs_produtividade (tarefa_nome, tempo_gasto_segundos) VALUES (%s, %s)"
-        cursor.execute(sql, (tarefa, segundos))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return {"status": "sucesso", "mensagem": "Dados de foco registrados!"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# 2. Rota de Inteligência (Sugestão de Foco)
+# [MUDANÇA: IA Preditiva para produtividade]
+@app.get("/neurodesk/foco-do-dia")
+def obter_foco():
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT nome, estoque_atual FROM produtos WHERE status_prioridade = 'CRÍTICO'")
+    alertas = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return {
+        "mensagem": "NeuroDesk: Reduza o retrabalho focando nestes itens",
+        "prioridade_maxima": alertas
+    }
+
+# 3. Rota de Exportação para Planilha
+# [MUDANÇA: Conexão direta para alimentar seu Dashboard externo]
+@app.get("/neurodesk/exportar")
+def exportar_dados():
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos")
+    rows = cursor.fetchall()
+    
+    filename = "dados_dashboard_neurodesk.csv"
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['ID', 'Nome', 'Categoria', 'Estoque', 'Mínimo', 'Preço', 'Status'])
+        writer.writerows(rows)
+    
+    cursor.close()
+    conn.close()
+    return FileResponse(filename, media_type='text/csv', filename=filename)
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-# Simulação de IA para sugerir foco ao farmacêutico
-@app.get("/neurodesk/sugestao-foco")
-def sugerir_foco():
-    # Aqui a IA analisaria o estoque e as vendas
-    # Para a demo, vamos simular uma análise real
-    sugestoes = [
-        {"prioridade": "ALTA", "acao": "Repor Dipirona (Estoque abaixo do mínimo)"},
-        {"prioridade": "MÉDIA", "acao": "Validar receitas pendentes de Amoxicilina"},
-        {"prioridade": "BAIXA", "acao": "Organizar prateleira de Dermocosméticos"}
-    ]
-    return {"status": "Modo Foco Ativo", "sugestoes": sugestoes}
