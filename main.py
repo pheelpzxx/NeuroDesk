@@ -49,3 +49,15 @@ def registrar_foco(tarefa: str, segundos: int):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# Simulação de IA para sugerir foco ao farmacêutico
+@app.get("/neurodesk/sugestao-foco")
+def sugerir_foco():
+    # Aqui a IA analisaria o estoque e as vendas
+    # Para a demo, vamos simular uma análise real
+    sugestoes = [
+        {"prioridade": "ALTA", "acao": "Repor Dipirona (Estoque abaixo do mínimo)"},
+        {"prioridade": "MÉDIA", "acao": "Validar receitas pendentes de Amoxicilina"},
+        {"prioridade": "BAIXA", "acao": "Organizar prateleira de Dermocosméticos"}
+    ]
+    return {"status": "Modo Foco Ativo", "sugestoes": sugestoes}
