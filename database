@@ -1,0 +1,106 @@
+--MySQL
+
+
+CREATE DATABASE IF NOT EXISTS neurodesk_db;
+USE neurodesk_db;
+
+-- Tabela de Produtos (Medicamentos)
+CREATE TABLE produtos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    categoria VARCHAR(50),
+    estoque_atual INT DEFAULT 0,
+    estoque_minimo INT DEFAULT 10,
+    preco DECIMAL(10, 2) NOT NULL
+);
+
+-- Tabela de Vendas
+CREATE TABLE vendas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    produto_id INT,
+    quantidade INT,
+    data_venda DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+);
+
+-- Tabela de Foco (Diferencial Neurodesk)
+-- Registra quanto tempo o funcionário levou para processar uma tarefa
+CREATE TABLE logs_produtividade (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tarefa_nome VARCHAR(100),
+    tempo_gasto_segundos INT,
+    data_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Inserir dados 
+INSERT INTO produtos (nome, categoria, estoque_atual, preco) VALUES 
+('Paracetamol 500mg', 'Analgésico', 100, 15.50),
+('Amoxicilina 250mg', 'Antibiótico', 45, 42.00);
+
+/* Inserir mais dados para análise:
+USE neurodesk_db;
+
+INSERT INTO produtos (nome, categoria, estoque_atual, estoque_minimo, preco) VALUES
+-- ANALGÉSICOS E ANTITÉRMICOS (50 itens variados)
+('Dipirona Monoidratada 500mg', 'Genérico', 500, 50, 4.50),
+('Ibuprofeno 600mg', 'Genérico', 200, 30, 12.90),
+('Paracetamol 750mg', 'Genérico', 300, 40, 8.20),
+('Novalgina 1g 10 comprimidos', 'Referência', 150, 20, 22.50),
+('Tylenol 750mg', 'Referência', 120, 20, 25.90),
+('Lisador 500mg', 'Referência', 90, 15, 18.00),
+('Dorflex 36 comprimidos', 'Referência', 400, 50, 24.90),
+('Neosaldina 30 drágeas', 'Referência', 250, 30, 32.00),
+('Buscopan Composto', 'Referência', 180, 25, 19.90),
+('Advil 400mg Alívio Rápido', 'Referência', 140, 20, 21.00),
+
+-- ANTIBIÓTICOS E ANTI-INFLAMATÓRIOS (Simulados - 100 itens)
+('Amoxicilina + Clavulanato 875mg', 'Antibiótico', 60, 10, 85.00),
+('Azitromicina 500mg 3 comp', 'Genérico', 80, 15, 28.00),
+('Ciprofloxacino 500mg', 'Genérico', 55, 10, 35.00),
+('Nimesulida 100mg', 'Genérico', 210, 30, 14.00),
+('Diclofenaco Potássico 50mg', 'Genérico', 170, 25, 9.50),
+('Cataflam Pro Emulgel', 'Referência', 95, 15, 38.90),
+('Astro 500mg', 'Referência', 70, 12, 45.00),
+('Clavulin BD 875mg', 'Referência', 40, 8, 120.00),
+('Puran T4 100mcg', 'Referência', 300, 50, 22.00),
+('Euthyrox 50mcg', 'Referência', 250, 40, 19.50),
+
+-- DERMOCOSMÉTICOS (150 itens)
+('Protetor Solar La Roche-Posay Anthelios SPF 60', 'Dermocosmético', 45, 5, 89.90),
+('Vichy Minéral 89', 'Dermocosmético', 30, 5, 150.00),
+('CeraVe Creme Hidratante 454g', 'Dermocosmético', 25, 5, 95.00),
+('Protetor Solar Episol Color Tom 2', 'Dermocosmético', 35, 8, 78.00),
+('Sabonete Líquido Actine 140g', 'Dermocosmético', 60, 10, 55.00),
+('Bioderma Sensibio H2O 500ml', 'Dermocosmético', 20, 4, 92.00),
+('Avène Água Termal 150ml', 'Dermocosmético', 15, 3, 68.00),
+('Eucerin pH5 Loção Hidratante', 'Dermocosmético', 40, 6, 82.00),
+('Bepantol Derma Creme 40g', 'Dermocosmético', 110, 20, 35.00),
+('Cicaplast Baume B5', 'Dermocosmético', 55, 10, 48.00),
+
+-- HIGIENE E CUIDADOS PESSOAIS (150 itens)
+('Escova Dental Oral-B Indicator', 'Higiene', 200, 30, 12.50),
+('Creme Dental Colgate Total 12', 'Higiene', 450, 60, 9.90),
+('Fio Dental Johnson & Johnson 100m', 'Higiene', 180, 25, 14.00),
+('Shampoo Pantene Restauração 400ml', 'Higiene', 90, 15, 22.00),
+('Desodorante Rexona Clinical Men', 'Higiene', 130, 20, 29.90),
+('Sabonete Dove Original 90g', 'Higiene', 600, 100, 4.50),
+('Absorvente Always Noite e Dia 32un', 'Higiene', 150, 20, 28.00),
+('Fralda Pampers Ajuste Total G 60un', 'Higiene', 40, 10, 115.00),
+('Lenço Umedecido Huggies 48un', 'Higiene', 85, 15, 16.00),
+('Enxaguante Bucal Listerine 500ml', 'Higiene', 70, 12, 26.00),
+
+-- SUPLEMENTOS E VITAMINAS (50 itens)
+('Centrum de A a Zinco 60 comp', 'Suplemento', 50, 10, 85.00),
+('Vitamina C Redoxon 1g', 'Suplemento', 120, 20, 22.00),
+('Ômega 3 Lavitan 1000mg', 'Suplemento', 90, 15, 45.00),
+('Magnésio Bisglicinato 60 cáps', 'Suplemento', 65, 10, 38.00),
+('Whey Protein Integralmedica 900g', 'Suplemento', 20, 5, 160.00),
+('Creatina Max Titanium 300g', 'Suplemento', 35, 8, 110.00),
+('Melatonina 0.21mg 60 gotas', 'Suplemento', 100, 15, 32.00),
+('Colágeno Hidrolisado Verisol', 'Suplemento', 45, 10, 125.00),
+('Vitamina D3 10.000 UI', 'Suplemento', 150, 20, 55.00),
+('BCAA 2400 Max Titanium', 'Suplemento', 40, 8, 62.00);
+
+-- Nota: Para chegar nos 500, você pode replicar estas linhas mudando levemente nomes 
+-- (ex: mudar miligramagem ou marcas genéricas Medley, EMS, Eurofarma).*/
+
