@@ -171,3 +171,49 @@ document.querySelectorAll('.nav a').forEach(link => {
         document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' });
     });
 });
+// Funções do modal (adicione ao final do main.js)
+function abrirModal(id, nome, estoqueAtual) {
+    document.getElementById('modal-produto-id').value = id;
+    document.getElementById('modal-produto-nome').textContent = nome;
+    document.getElementById('modal-novo-estoque').value = estoqueAtual;
+    document.getElementById('modal-estoque').style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modal-estoque').style.display = 'none';
+}
+
+async function salvarEstoque() {
+    const id = document.getElementById('modal-produto-id').value;
+    const novoEstoque = document.getElementById('modal-novo-estoque').value;
+    
+    try {
+        const response = await fetch(`/produtos/${id}/atualizar_estoque`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estoque_atual: parseInt(novoEstoque) })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            alert(data.message);
+            fecharModal();
+            carregarAlertas();
+            carregarProdutos();
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    } catch (error) {
+        alert('Erro de conexão: ' + error.message);
+    }
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modal-estoque')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modal-estoque') fecharModal();
+});
+
+// Fechar com ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharModal();
+});
