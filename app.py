@@ -1,74 +1,91 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from flask import Flask, render_template, request, jsonify
 import mysql.connector
-import csv
-import os
+from flask_cors import CORS
+from datetime import datetime
 
-app = FastAPI(title="NeuroDesk - Sistema de Foco Extremo")
+app = Flask(__name__)
+CORS(app)
 
-# Configuração de conexão
+# Configuração do Banco de Dados NeuroDesk
 db_config = {
-    "host": "localhost",
-    "user": "root",
-    "password": "sua_senha", # [AJUSTE AQUI]
-    "database": "neurodesk_db"
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'sua_senha',  # ALTERE SUA SENHA AQUI
+    'database': 'neurodesk_db'
 }
 
-# [MUDANÇA: Validação de Dados Pydantic]
-# Impede o retrabalho garantindo que os dados inseridos sejam válidos
-class ProdutoSchema(BaseModel):
-    nome: str = Field(..., min_length=2)
-    categoria: str
-    estoque_atual: int = Field(..., ge=0)
-    estoque_minimo: int = Field(10, ge=0)
-    preco: float = Field(..., gt=0)
+def get_db_connection():
+    try:
+        return mysql.connector.connect(**db_config)
+    except Exception as e:
+        print(f"Erro de conexão: {e}")
+        return None
 
-# 1. Rota para Listar Produtos
-@app.get("/produtos")
-def listar_produtos():
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM produtos ORDER BY status_prioridade DESC")
-    dados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return dados
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# 2. Rota de Inteligência (Sugestão de Foco)
-# [MUDANÇA: IA Preditiva para produtividade]
-@app.get("/neurodesk/foco-do-dia")
-def obter_foco():
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT nome, estoque_atual FROM produtos WHERE status_prioridade = 'CRÍTICO'")
-    alertas = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {
-        "mensagem": "NeuroDesk: Reduza o retrabalho focando nestes itens",
-        "prioridade_maxima": alertas
-    }
+@app.route('/status', methods=['GET'])
+def check_status():
+    return jsonify({"status": "NeuroDesk Online", "version": "1.0.0"}), 200
 
-# 3. Rota de Exportação para Planilha
-# [MUDANÇA: Conexão direta para alimentar seu Dashboard externo]
-@app.get("/neurodesk/exportar")
-def exportar_dados():
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos")
-    rows = cursor.fetchall()
+@app.route('/processar_tarefa', methods=['POST'])
+def processar_tarefa():
+    data = request.json
+    tarefa_descricao = data.get('descricao')
+    prioridade = data.get('prioridade', 2)
     
-    filename = "dados_dashboard_neurodesk.csv"
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['ID', 'Nome', 'Categoria', 'Estoque', 'Mínimo', 'Preço', 'Status'])
-        writer.writerows(rows)
+    if not tarefa_descricao:
+        return jsonify({"error": "Descrição da tarefa é obrigatória"}), 400
     
-    cursor.close()
-    conn.close()
-    return FileResponse(filename, media_type='text/csv', filename=filename)
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Erro de conexão com o banco de dados"}), 500
+            
+        cursor = conn.cursor()
+        query = "INSERT INTO tarefas (descricao, prioridade_ia, status) VALUES (%s, %s, %s)"
+        cursor.execute(query, (tarefa_descricao, prioridade, 'pendente'))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "message": "Tarefa registrada no NeuroDesk!",
+            "descricao": tarefa_descricao,
+            "prioridade": prioridade
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.route('/listar_tarefas', methods=['GET'])
+def listar_tarefas():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify([]), 500
+            
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT t.id, t.descricao, t.prioridade_ia as prioridade, t.criado_em
+            FROM tarefas t
+            ORDER BY t.criado_em DESC
+            LIMIT 10
+        """
+        cursor.execute(query)
+        tarefas = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Converter datetime para string
+        for tarefa in tarefas:
+            if isinstance(tarefa.get('criado_em'), datetime):
+                tarefa['criado_em'] = tarefa['criado_em'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify(tarefas), 200
+    except Exception as e:
+        print(f"Erro ao listar tarefas: {e}")
+        return jsonify([]), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
