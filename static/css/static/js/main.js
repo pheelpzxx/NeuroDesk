@@ -4,34 +4,38 @@ async function checkStatus() {
         const response = await fetch('/status');
         const data = await response.json();
         
-        document.getElementById('system-status').classList.add('online');
-        document.getElementById('system-status').textContent = 'Online';
-        document.getElementById('status-msg').textContent = 
-            `${data.status} v${data.version} - Conectado ao MySQL`;
+        const statusDot = document.getElementById('system-status');
+        const statusMsg = document.getElementById('status-msg');
+        
+        if (data.mysql === 'conectado') {
+            statusDot.classList.add('online');
+            statusDot.textContent = 'Online';
+            statusMsg.textContent = `✅ ${data.status} v${data.version} - MySQL conectado`;
+        } else {
+            statusDot.textContent = '⚠️';
+            statusMsg.textContent = `⚠️ ${data.status} - MySQL desconectado`;
+        }
     } catch (error) {
-        document.getElementById('system-status').textContent = 'Offline';
-        document.getElementById('status-msg').textContent = 
-            'Erro de conexão com o backend';
+        document.getElementById('system-status').textContent = '❌';
+        document.getElementById('status-msg').textContent = 'Erro de conexão com o backend';
     }
 }
 
-// Enviar nova tarefa
-document.getElementById('tarefa-form').addEventListener('submit', async (e) => {
+// Registrar log de produtividade
+document.getElementById('tarefa-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const descricao = document.getElementById('descricao').value;
-    const prioridade = document.getElementById('prioridade').value;
+    const tempoEstimado = document.getElementById('tempo_estimado')?.value || 0;
     const feedback = document.getElementById('form-feedback');
     
     try {
-        const response = await fetch('/processar_tarefa', {
+        const response = await fetch('/registrar_log', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                descricao: descricao,
-                prioridade: parseInt(prioridade)
+                tarefa_nome: descricao,
+                tempo_gasto_segundos: parseInt(tempoEstimado) * 60 // converte minutos para segundos
             })
         });
         
@@ -39,89 +43,121 @@ document.getElementById('tarefa-form').addEventListener('submit', async (e) => {
         
         if (response.ok) {
             feedback.className = 'feedback-msg success';
-            feedback.textContent = '✅ Tarefa registrada com sucesso!';
+            feedback.textContent = data.message;
             document.getElementById('tarefa-form').reset();
-            
-            // Atualizar lista de tarefas
-            loadTarefas();
+            carregarAlertas(); // Atualiza a lista de críticos
         } else {
-            throw new Error(data.error || 'Erro ao registrar tarefa');
+            throw new Error(data.error || 'Erro ao registrar');
         }
     } catch (error) {
         feedback.className = 'feedback-msg error';
         feedback.textContent = `❌ Erro: ${error.message}`;
     }
     
-    // Esconder mensagem após 5 segundos
     setTimeout(() => {
         feedback.className = 'feedback-msg';
         feedback.textContent = '';
     }, 5000);
 });
 
-// Carregar tarefas recentes
-async function loadTarefas() {
+// Carregar produtos críticos (alertas de estoque)
+async function carregarAlertas() {
     try {
-        const response = await fetch('/listar_tarefas');
-        let tarefas = [];
+        const response = await fetch('/produtos/criticos');
+        let produtos = [];
         
         if (response.ok) {
-            tarefas = await response.json();
-        } else {
-            // Dados mockados para teste
-            tarefas = [
-                { id: 1, descricao: 'Conferência de estoque', prioridade: 3, criado_em: '2026-05-15 10:30:00' },
-                { id: 2, descricao: 'Relatório de validação', prioridade: 2, criado_em: '2026-05-15 09:15:00' },
-                { id: 3, descricao: 'Ajuste de planilha de custos', prioridade: 1, criado_em: '2026-05-14 16:45:00' }
-            ];
+            produtos = await response.json();
         }
         
-        const taskList = document.getElementById('task-list');
-        taskList.innerHTML = '';
+        const alertList = document.getElementById('alert-list');
+        if (!alertList) return;
         
-        if (tarefas.length === 0) {
-            taskList.innerHTML = '<li style="text-align: center; color: var(--text-light); padding: 2rem;">Nenhuma tarefa registrada</li>';
+        alertList.innerHTML = '';
+        
+        if (produtos.length === 0) {
+            alertList.innerHTML = '<li style="text-align:center;color:var(--text-light);padding:2rem">✅ Nenhum produto crítico no momento</li>';
+            document.getElementById('alert-count').textContent = '0';
             return;
         }
         
-        tarefas.forEach(tarefa => {
+        produtos.forEach(produto => {
             const li = document.createElement('li');
-            const prioridadeTexto = ['Baixa', 'Média', 'Alta'][tarefa.prioridade - 1] || 'Média';
-            const corPrioridade = ['var(--alert-low)', 'var(--alert-med)', 'var(--alert-high)'][tarefa.prioridade - 1] || 'var(--alert-med)';
+            const isCritico = produto.status_prioridade === 'CRÍTICO' || produto.estoque_atual <= produto.estoque_minimo;
+            
+            li.className = `alert-item ${isCritico ? 'high' : 'medium'}`;
+            li.innerHTML = `
+                <span class="tag ${isCritico ? 'alta' : 'media'}">${isCritico ? 'CRÍTICO' : 'Atenção'}</span>
+                <p><strong>${produto.nome}</strong><br>
+                <small>Estoque: ${produto.estoque_atual} | Mínimo: ${produto.estoque_minimo}</small></p>
+                <small>${produto.categoria} • R$ ${parseFloat(produto.preco).toFixed(2)}</small>
+            `;
+            alertList.appendChild(li);
+        });
+        
+        // Atualiza contador de alertas
+        document.getElementById('alert-count').textContent = produtos.length;
+        
+    } catch (error) {
+        console.error('Erro ao carregar alertas:', error);
+    }
+}
+
+// Carregar lista de produtos recentes
+async function carregarProdutos() {
+    try {
+        const response = await fetch('/produtos');
+        let produtos = [];
+        
+        if (response.ok) {
+            produtos = await response.json();
+        }
+        
+        const taskList = document.getElementById('task-list');
+        if (!taskList) return;
+        
+        taskList.innerHTML = '';
+        
+        if (produtos.length === 0) {
+            taskList.innerHTML = '<li style="text-align:center;color:var(--text-light);padding:2rem">Nenhum produto cadastrado</li>';
+            return;
+        }
+        
+        // Mostra apenas os 10 primeiros
+        produtos.slice(0, 10).forEach(produto => {
+            const li = document.createElement('li');
+            const prioridadeCor = produto.status_prioridade === 'CRÍTICO' 
+                ? 'var(--alert-high)' 
+                : produto.estoque_atual <= produto.estoque_minimo 
+                    ? 'var(--alert-med)' 
+                    : 'var(--alert-low)';
             
             li.innerHTML = `
                 <div class="task-info">
-                    <h4>${tarefa.descricao}</h4>
-                    <small>${new Date(tarefa.criado_em).toLocaleString('pt-BR')}</small>
+                    <h4>${produto.nome}</h4>
+                    <small>${produto.categoria} • Estoque: ${produto.estoque_atual}</small>
                 </div>
-                <span class="tag" style="background: ${corPrioridade}; color: white;">${prioridadeTexto}</span>
+                <span class="tag" style="background:${prioridadeCor};color:white">
+                    ${produto.status_prioridade}
+                </span>
             `;
             taskList.appendChild(li);
         });
         
-        // Atualizar contador de alertas
-        const alertasAltos = tarefas.filter(t => t.prioridade === 3).length;
-        document.getElementById('alert-count').textContent = alertasAltos;
     } catch (error) {
-        console.error('Erro ao carregar tarefas:', error);
+        console.error('Erro ao carregar produtos:', error);
     }
-}
-
-// Limpar alertas lidos
-function limparAlertas() {
-    const alertList = document.getElementById('alert-list');
-    alertList.innerHTML = '<li style="text-align: center; color: var(--text-light); padding: 2rem;">Nenhum alerta pendente</li>';
-    document.getElementById('alert-count').textContent = '0';
 }
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     checkStatus();
-    loadTarefas();
+    carregarAlertas();
+    carregarProdutos();
     
-    // Atualizar a cada 30 segundos
+    // Atualiza a cada 30 segundos
     setInterval(checkStatus, 30000);
-    setInterval(loadTarefas, 30000);
+    setInterval(carregarAlertas, 30000);
 });
 
 // Navegação suave
@@ -132,6 +168,6 @@ document.querySelectorAll('.nav a').forEach(link => {
         e.target.classList.add('active');
         
         const target = e.target.getAttribute('href');
-        document.querySelector(target).scrollIntoView({ behavior: 'smooth' });
+        document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' });
     });
 });
