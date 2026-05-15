@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeuroDesk | Gestão de Produtividade</title>
+    <title>NeuroDesk | Gestão Farmacêutica Inteligente</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,85 +16,208 @@
             </div>
             <nav class="nav">
                 <a href="#dashboard" class="active">Dashboard</a>
-                <a href="#alertas">Alertas</a>
-                <a href="#registros">Registros Diários</a>
+                <a href="#alertas">Alertas de Estoque</a>
+                <a href="#produtos">Produtos</a>
+                <a href="#produtividade">Produtividade</a>
             </nav>
             <div class="user-actions">
-                <button class="btn-icon"><i class="fa-regular fa-bell"></i><span class="badge" id="alert-count">0</span></button>
-                <div class="avatar">AD</div>
+                <button class="btn-icon" title="Notificações">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge" id="alert-count">0</span>
+                </button>
+                <div class="avatar" title="Perfil">AD</div>
             </div>
         </div>
     </header>
 
     <main class="container dashboard-grid">
-        <!-- Seção de Status -->
+        
+        <!-- Seção de Status do Sistema -->
         <section class="card status-card">
             <div class="card-header">
                 <h2><i class="fa-solid fa-signal"></i> Status do Sistema</h2>
                 <span class="status-dot" id="system-status">Verificando...</span>
             </div>
-            <p id="status-msg">Conectando ao backend...</p>
+            <p id="status-msg">Conectando ao backend e MySQL...</p>
+            <div class="status-details" style="margin-top: 1rem; display: flex; gap: 2rem; font-size: 0.9rem;">
+                <span><i class="fa-solid fa-database"></i> neurodesk_db</span>
+                <span><i class="fa-solid fa-boxes-stacked"></i> <strong id="total-produtos">--</strong> produtos</span>
+                <span><i class="fa-solid fa-triangle-exclamation"></i> <strong id="total-criticos">--</strong> críticos</span>
+            </div>
         </section>
 
-        <!-- Área de Alertas -->
+        <!-- Área de Alertas de Estoque (CRÍTICOS) -->
         <section id="alertas" class="card alert-area">
             <div class="card-header">
-                <h2><i class="fa-solid fa-triangle-exclamation"></i> Alertas & Prioridades</h2>
-                <button class="btn-small" onclick="limparAlertas()">Limpar Lidos</button>
+                <h2><i class="fa-solid fa-triangle-exclamation"></i> Alertas de Estoque</h2>
+                <button class="btn-small" onclick="recarregarAlertas()">
+                    <i class="fa-solid fa-rotate"></i> Atualizar
+                </button>
             </div>
             <ul class="alert-list" id="alert-list">
+                <!-- Preenchido dinamicamente via JavaScript -->
                 <li class="alert-item high">
-                    <span class="tag alta">Alta</span>
-                    <p>Relatório de validação farmacêutica atrasado.</p>
-                    <small>Há 2h</small>
+                    <span class="tag alta">CRÍTICO</span>
+                    <p><strong>Amoxicilina 250mg</strong><br>
+                    <small>Estoque: 15 | Mínimo: 20</small></p>
+                    <small>Antibiótico • R$ 42,00</small>
                 </li>
-                <li class="alert-item medium">
-                    <span class="tag media">Média</span>
-                    <p>Conferência de estoque pendiente.</p>
-                    <small>Há 5h</small>
+                <li class="alert-item high">
+                    <span class="tag alta">CRÍTICO</span>
+                    <p><strong>CeraVe Hidratante</strong><br>
+                    <small>Estoque: 5 | Mínimo: 10</small></p>
+                    <small>Dermocosmético • R$ 95,00</small>
                 </li>
             </ul>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="#produtos" class="btn-small" style="text-decoration: none;">Ver todos os produtos →</a>
+            </div>
         </section>
 
-        <!-- Registro Rápido / Nova Tarefa -->
-        <section id="registros" class="card task-form">
+        <!-- Registro de Produtividade -->
+        <section id="produtividade" class="card task-form">
             <div class="card-header">
-                <h2><i class="fa-solid fa-pen-to-square"></i> Novo Registro Diário</h2>
+                <h2><i class="fa-solid fa-stopwatch"></i> Registrar Produtividade</h2>
             </div>
             <form id="tarefa-form">
                 <div class="form-group">
-                    <label for="descricao">Descrição da Tarefa</label>
-                    <textarea id="descricao" rows="3" placeholder="Ex: Conferência de estoque lote #442, ajuste de planilha de custos..." required></textarea>
+                    <label for="descricao">Atividade Realizada</label>
+                    <textarea id="descricao" rows="3" placeholder="Ex: Conferência de estoque Dipirona, atualização de preços, atendimento farmacêutico..." required></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="prioridade">Nível de Urgência</label>
-                    <select id="prioridade">
-                        <option value="1">Baixa</option>
-                        <option value="2" selected>Média</option>
-                        <option value="3">Alta</option>
-                    </select>
+                    <label for="tempo_estimado">Tempo Gasto (minutos)</label>
+                    <input type="number" id="tempo_estimado" min="1" max="480" value="15">
                 </div>
-                <button type="submit" class="btn-primary">Registrar no NeuroDesk</button>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-paper-plane"></i> Registrar no NeuroDesk
+                </button>
             </form>
             <p class="feedback-msg" id="form-feedback"></p>
+            
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--text);">
+                    <i class="fa-regular fa-clock"></i> Últimos Registros
+                </h4>
+                <ul id="logs-recents" style="list-style: none; font-size: 0.85rem; color: var(--text-light);">
+                    <li>• Conferência de estoque - há 2h</li>
+                    <li>• Atualização de preços - há 5h</li>
+                </ul>
+            </div>
         </section>
 
-        <!-- Tarefas Recentes -->
-        <section class="card recent-tasks">
+        <!-- Lista de Produtos -->
+        <section id="produtos" class="card recent-tasks">
             <div class="card-header">
-                <h2><i class="fa-solid fa-list-check"></i> Tarefas Recentes</h2>
+                <h2><i class="fa-solid fa-boxes-stacked"></i> Produtos Cadastrados</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="filtro-categoria" class="btn-small" style="padding: 0.4rem 0.6rem;">
+                        <option value="">Todas categorias</option>
+                        <option value="Genérico">Genérico</option>
+                        <option value="Referência">Referência</option>
+                        <option value="Antibiótico">Antibiótico</option>
+                        <option value="Dermocosmético">Dermocosmético</option>
+                        <option value="Higiene">Higiene</option>
+                        <option value="Suplemento">Suplemento</option>
+                    </select>
+                    <button class="btn-small" onclick="carregarProdutos()">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                </div>
             </div>
+            
+            <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <input type="text" id="busca-produto" placeholder="Buscar produto..." 
+                       style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;">
+                <button class="btn-small" onclick="buscarProduto()">
+                    <i class="fa-solid fa-search"></i> Buscar
+                </button>
+            </div>
+            
             <ul class="task-list" id="task-list">
-                <!-- Preenchido via JS -->
+                <!-- Preenchido dinamicamente via JavaScript -->
+                <li>
+                    <div class="task-info">
+                        <h4>Dipirona 500mg</h4>
+                        <small>Analgésico • Estoque: 100</small>
+                    </div>
+                    <span class="tag" style="background: var(--alert-low); color: white;">Normal</span>
+                </li>
+                <li>
+                    <div class="task-info">
+                        <h4>Amoxicilina 250mg</h4>
+                        <small>Antibiótico • Estoque: 15</small>
+                    </div>
+                    <span class="tag" style="background: var(--alert-high); color: white;">CRÍTICO</span>
+                </li>
             </ul>
+            
+            <div style="text-align: center; margin-top: 1rem;">
+                <button class="btn-small" id="btn-carregar-mais">
+                    Carregar mais produtos
+                </button>
+            </div>
         </section>
+
+        <!-- Resumo Rápido -->
+        <section class="card" style="grid-column: span 2;">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-chart-simple"></i> Resumo do Dia</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                <div style="text-align: center; padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" id="resumo-logs">0</div>
+                    <div style="font-size: 0.85rem; color: var(--text-light);">Logs hoje</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--alert-high);" id="resumo-criticos">0</div>
+                    <div style="font-size: 0.85rem; color: var(--text-light);">Produtos críticos</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary);" id="resumo-valor">R$ 0</div>
+                    <div style="font-size: 0.85rem; color: var(--text-light);">Valor em estoque</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg); border-radius: var(--radius);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);" id="resumo-tempo">0h</div>
+                    <div style="font-size: 0.85rem; color: var(--text-light);">Tempo registrado</div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <footer class="footer">
         <div class="container">
             <p>© 2026 NeuroDesk | Otimização Inteligente para Setor Farmacêutico</p>
+            <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--text-light);">
+                <i class="fa-solid fa-shield-halved"></i> Dados protegidos • Sistema em desenvolvimento
+            </p>
         </div>
     </footer>
+
+    <!-- Modal para editar estoque (opcional) -->
+    <div id="modal-estoque" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pencil"></i> Atualizar Estoque</h3>
+                <button class="btn-icon" onclick="fecharModal()" style="font-size: 1.2rem;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modal-produto-id">
+                <p><strong id="modal-produto-nome"></strong></p>
+                <div class="form-group">
+                    <label for="modal-novo-estoque">Novo valor de estoque</label>
+                    <input type="number" id="modal-novo-estoque" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: var(--radius);">
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-light);">
+                    <i class="fa-solid fa-circle-info"></i> O sistema recalculará automaticamente a prioridade com base no estoque mínimo.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small" onclick="fecharModal()">Cancelar</button>
+                <button class="btn-primary" onclick="salvarEstoque()">Salvar Alteração</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/main.js"></script>
 </body>
