@@ -1,1 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroDesk | Gestão de Produtividade</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container header-flex">
+            <div class="logo">
+                <i class="fa-solid fa-brain"></i> NeuroDesk
+            </div>
+            <nav class="nav">
+                <a href="#dashboard" class="active">Dashboard</a>
+                <a href="#alertas">Alertas</a>
+                <a href="#registros">Registros Diários</a>
+            </nav>
+            <div class="user-actions">
+                <button class="btn-icon"><i class="fa-regular fa-bell"></i><span class="badge" id="alert-count">0</span></button>
+                <div class="avatar">AD</div>
+            </div>
+        </div>
+    </header>
 
+    <main class="container dashboard-grid">
+        <!-- Seção de Status -->
+        <section class="card status-card">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-signal"></i> Status do Sistema</h2>
+                <span class="status-dot" id="system-status">Verificando...</span>
+            </div>
+            <p id="status-msg">Conectando ao backend...</p>
+        </section>
+
+        <!-- Área de Alertas -->
+        <section id="alertas" class="card alert-area">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-triangle-exclamation"></i> Alertas & Prioridades</h2>
+                <button class="btn-small" onclick="limparAlertas()">Limpar Lidos</button>
+            </div>
+            <ul class="alert-list" id="alert-list">
+                <li class="alert-item high">
+                    <span class="tag alta">Alta</span>
+                    <p>Relatório de validação farmacêutica atrasado.</p>
+                    <small>Há 2h</small>
+                </li>
+                <li class="alert-item medium">
+                    <span class="tag media">Média</span>
+                    <p>Conferência de estoque pendiente.</p>
+                    <small>Há 5h</small>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Registro Rápido / Nova Tarefa -->
+        <section id="registros" class="card task-form">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-pen-to-square"></i> Novo Registro Diário</h2>
+            </div>
+            <form id="tarefa-form">
+                <div class="form-group">
+                    <label for="descricao">Descrição da Tarefa</label>
+                    <textarea id="descricao" rows="3" placeholder="Ex: Conferência de estoque lote #442, ajuste de planilha de custos..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="prioridade">Nível de Urgência</label>
+                    <select id="prioridade">
+                        <option value="1">Baixa</option>
+                        <option value="2" selected>Média</option>
+                        <option value="3">Alta</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Registrar no NeuroDesk</button>
+            </form>
+            <p class="feedback-msg" id="form-feedback"></p>
+        </section>
+
+        <!-- Tarefas Recentes -->
+        <section class="card recent-tasks">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-list-check"></i> Tarefas Recentes</h2>
+            </div>
+            <ul class="task-list" id="task-list">
+                <!-- Preenchido via JS -->
+            </ul>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 NeuroDesk | Otimização Inteligente para Setor Farmacêutico</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
